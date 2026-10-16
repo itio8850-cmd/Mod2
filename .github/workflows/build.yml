@@ -1,0 +1,36 @@
+name: Build mod
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 8
+      - name: Montar e compilar
+        shell: bash
+        run: |
+          curl -L -o mdk.zip https://maven.minecraftforge.net/net/minecraftforge/forge/1.16.5-36.2.39/forge-1.16.5-36.2.39-mdk.zip
+          mkdir mdk
+          unzip -q mdk.zip -d mdk
+          unzip -q src.zip
+          rm -rf mdk/src
+          cp -r src mdk/src
+          cd mdk
+          sed -i "s/channel: 'snapshot', version: '[^']*'/channel: 'official', version: '1.16.5'/" build.gradle
+          sed -i "s/examplemod/rpgclasses/g" build.gradle
+          chmod +x gradlew
+          ./gradlew build --no-daemon 2>&1 | tee build.log
+      - uses: actions/upload-artifact@v4
+        with:
+          name: rpgclasses-mod
+          path: mdk/build/libs/*.jar
+      - uses: actions/upload-artifact@v4
+        if: failure()
+        with:
+          name: log-de-erro
+          path: mdk/build.log
